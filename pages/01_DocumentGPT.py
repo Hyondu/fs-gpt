@@ -52,6 +52,10 @@ def save_memory(input, output):
     st.session_state.memory.save_context({"input": input}, {"output": output})
 
 
+def load_memory(_):
+    return st.session_state.memory.load_memory_variables({})["history"]
+
+
 def invoke_chain(chain, msg):
     res = chain.invoke(msg)
     save_memory(msg, res.content)
@@ -131,10 +135,18 @@ if file:
     msg = st.chat_input("Ask anything about your file...")
     if msg:
         send_message(msg, "human")
+        # chain = {
+        #     "context": retriever | RunnableLambda(format_docs),
+        #     "question": RunnablePassthrough(),
+        # } | RunnablePassthrough.assign(
+        #     history=RunnableLambda(
+        #         st.session_state.memory.load_memory_variables
+        #     ) | itemgetter("history")
+        # ) | prompt | chat
         chain = {
             "context": retriever | RunnableLambda(format_docs),
             "question": RunnablePassthrough(),
-        } | RunnablePassthrough.assign(history=RunnableLambda(st.session_state.memory.load_memory_variables) | itemgetter("history")) | prompt | chat
+        } | RunnablePassthrough.assign(history=load_memory) | prompt | chat
         with st.chat_message("ai"):
             invoke_chain(chain, msg)
 else:
@@ -142,3 +154,4 @@ else:
     st.session_state["memory"] = ConversationSummaryBufferMemory(
         llm=chat, max_token_limit=2000, return_messages=True
     )
+    print(st.session_state.keys())
