@@ -1,3 +1,5 @@
+import os
+import shutil
 from operator import itemgetter
 import streamlit as st
 
@@ -90,7 +92,7 @@ def embed_file(file):
   )
   loader = UnstructuredFileLoader(file_path)
   docs = loader.load_and_split(text_splitter=splitter)
-  embeddings = OllamaEmbeddings(model="mistral:latest")
+  embeddings = OllamaEmbeddings(model=model)
   cached_embeddings = CacheBackedEmbeddings.from_bytes_store(
       embeddings, cache_dir)
   db = FAISS.from_documents(docs, cached_embeddings)
@@ -124,10 +126,10 @@ chat = ChatOllama(model=model, temperature=temperature,
 prompt = ChatPromptTemplate.from_messages([
     ("system",
      """
-     Answer the question using ONLY the following context. If you don't know the answer, just say you don't know.
-     DON'T make anything up. Answer in Korean.
+     주어진 문서의 내용만을 활용해서 질문에 답해주세요. 만일 답을 모르면 모른다고 하세요.
+     절대 아무 대답이나 지어내지 마세요. 한국어로 대화해 주세요.
 
-     Context: {context}
+     문서: {context}
      """),
     MessagesPlaceholder(variable_name="history"),
     ("human", "{question}"),
@@ -136,12 +138,11 @@ prompt = ChatPromptTemplate.from_messages([
 
 if file:
   retriever = embed_file(file)
-  send_message("I'm ready! Ask away!", "ai", save=False)
+  send_message("준비돼써!! 무엇이든 물어보세요!!", "ai", save=False)
   paint_history()
-  msg = st.chat_input("Ask anything about your file...")
+  msg = st.chat_input("업로드한 문서에 관해 무엇이든 물어봐요.")
   if msg:
     send_message(msg, "human")
-    print([k for k in st.session_state.keys()])
     chain = {
         "context": retriever | RunnableLambda(format_docs),
         "question": RunnablePassthrough(),
@@ -157,6 +158,13 @@ if file:
     with st.chat_message("ai"):
       invoke_chain(chain, msg)
 else:
+  try:
+    shutil.rmtree("./.cache/files")
+    shutil.rmtree("./.cache/embeddings")
+    os.makedirs("./.cache/embeddings")
+    os.makedirs("./.cache/files")
+  except (OSError, FileNotFoundError):
+    pass
   st.session_state["messages"] = []
   st.session_state["memory"] = ConversationSummaryBufferMemory(
       llm=chat, max_token_limit=2000, return_messages=True
