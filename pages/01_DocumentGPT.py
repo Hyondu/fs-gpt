@@ -34,14 +34,14 @@ with st.sidebar:
                           "txt", "pdf", "docx"])
 
 
-st.title("DocumentGPT")
+st.title("문서GPT")
 
 st.markdown("""
-Welcome!
+어서오세요!
 
-Use this chatbot to ask questions to an AI about your files!
+당신의 문서에 관해 AI 챗봇에게 물어보세요!
 
-Upload your file on the sidebar.
+왼쪽 사이드바에서 문서를 업로드 해보세요.
 """)
 
 
@@ -58,10 +58,6 @@ def save_massage(msg, role):
 
 def save_memory(input, output):
   st.session_state.memory.save_context({"input": input}, {"output": output})
-
-
-def load_memory(_):
-  return st.session_state.memory.load_memory_variables({})["memory"]
 
 
 def invoke_chain(chain, msg):
@@ -151,10 +147,6 @@ if file:
             st.session_state.memory.load_memory_variables
         ) | itemgetter("history")
     ) | prompt | chat
-    # chain = {
-    #     "context": retriever | RunnableLambda(format_docs),
-    #     "question": RunnablePassthrough(),
-    # } | RunnablePassthrough.assign(history=load_memory) | prompt | chat
     with st.chat_message("ai"):
       invoke_chain(chain, msg)
 else:
