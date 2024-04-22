@@ -26,7 +26,7 @@ st.set_page_config(
 
 with st.sidebar:
   model = st.selectbox("Choose LLM model",
-                       ("mistral:latest", "llama2:latest", "llama2:13b"))
+                       ("mistral:latest", "llama2:latest", "llama2:13b", "llama3"))
   temperature = st.slider("Temperature", 0.1, 1.0)
   file = st.file_uploader("upload a .txt .pdf or .docx file", type=[
                           "txt", "pdf", "docx"])
@@ -142,18 +142,18 @@ if file:
   if msg:
     send_message(msg, "human")
     print([k for k in st.session_state.keys()])
-    # chain = {
-    #     "context": retriever | RunnableLambda(format_docs),
-    #     "question": RunnablePassthrough(),
-    # } | RunnablePassthrough.assign(
-    #     history=RunnableLambda(
-    #         st.session_state.memory.load_memory_variables
-    #     ) | itemgetter("history")
-    # ) | prompt | chat
     chain = {
         "context": retriever | RunnableLambda(format_docs),
         "question": RunnablePassthrough(),
-    } | RunnablePassthrough.assign(history=load_memory) | prompt | chat
+    } | RunnablePassthrough.assign(
+        history=RunnableLambda(
+            st.session_state.memory.load_memory_variables
+        ) | itemgetter("history")
+    ) | prompt | chat
+    # chain = {
+    #     "context": retriever | RunnableLambda(format_docs),
+    #     "question": RunnablePassthrough(),
+    # } | RunnablePassthrough.assign(history=load_memory) | prompt | chat
     with st.chat_message("ai"):
       invoke_chain(chain, msg)
 else:
@@ -161,4 +161,3 @@ else:
   st.session_state["memory"] = ConversationSummaryBufferMemory(
       llm=chat, max_token_limit=2000, return_messages=True
   )
-  print([k for k in st.session_state.keys()])
